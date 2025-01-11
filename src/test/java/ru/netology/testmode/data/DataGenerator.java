@@ -1,59 +1,68 @@
 package ru.netology.testmode.data;
 
-
 import com.github.javafaker.Faker;
+import io.restassured.builder.RequestSpecBuilder;
+import io.restassured.filter.log.LogDetail;
+import io.restassured.http.ContentType;
+import io.restassured.specification.RequestSpecification;
 import lombok.Value;
 
-import java.time.LocalDate;
-import java.time.format.DateTimeFormatter;
 import java.util.Locale;
-import java.util.Random;
+
+import static io.restassured.RestAssured.given;
 
 public class DataGenerator {
+    private static final Faker faker = new Faker(new Locale("en"));
+    private static final RequestSpecification requestSpec = new RequestSpecBuilder()
+            .setBaseUri("http://localhost")
+            .setPort(9999)
+            .setAccept(ContentType.JSON)
+            .setContentType(ContentType.JSON)
+            .log(LogDetail.ALL)
+            .build();
+
     private DataGenerator() {
     }
 
-    public static String generateDate(int shift) {
-        return LocalDate.now().plusDays(shift).format(DateTimeFormatter.ofPattern("dd.MM.yyyy"));
+    private static void sendRequest(DataGenerator.RegistrationDto user) {
+        given() // "дано"
+                .spec(requestSpec) // указываем, какую спецификацию используем
+                .body(user) // передаём в теле объект, который будет преобразован в JSON
+                .when().log().all() // "когда"
+                .post("/api/system/users") // на какой путь относительно BaseUri отправляем запрос
+                .then() // "тогда ожидаем"
+                .statusCode(200); // код 200 OK
     }
 
-    public static String generateCity() {
-        String[] cities = new String[]{"Майкоп", "Горно-Алтайск", "Уфа", "Улан-Удэ", "Махачкала", "Магас", "Нальчик",
-                "Петразоводск", "Сыктывкар", "Йошкар-Ола", "Саранск", "Якутск", "Владикавказ", "Казань", "Кызыл",
-                "Ижевск", "Абакан", "Грозный", "Чебоксары", "Барнаул", "Чита", "Петропавловск-Камчатский",
-                "Краснодар", "Красноярск", "Пермь", "Ставрополь", "Хабаровск", "Благовещенск", "Архангельск",
-                "Астрахань", "Белгород", "Брянск", "Владимир", "Волгоград", "Вологда", "Воронеж", "Иваново", "Иркутск",
-                "Калининград", "Калуга", "Кемерово", "Киров", "Кострома", "Курган", "Курск", "Санкт-Петербург", "Липецк",
-                "Магадан", "Москва", "Мурманск", "Нижний Новгород", "Великий Новгород", "Новосибирск", "Омск", "Оренбург",
-                "Орел", "Пенза", "Псков", "Ростов-на-Дону", "Рязань", "Самара", "Саратов", "Южно-Сахалинск", "Екатеринбург",
-                "Смоленск", "Тамбов", "Тверь", "Томск", "Тула", "Тюмень", "Ульяновск", "Челябинск", "Ярославль", "Нарьян-Мар",
-                "Ханты-Мансийск", "Анадырь", "Салехард", "Биробиджан"};
-        return cities[new Random().nextInt(cities.length)];
+    public static String getRandomLogin() {
+        return faker.name().username();
     }
 
-    public static String generateName(String locale) {
-        Faker faker = new Faker(new Locale(locale));
-        return faker.name().lastName() + " " + faker.name().firstName();
-    }
-
-    public static String generatePhone(String locale) {
-        Faker faker = new Faker(new Locale(locale));
-        return faker.phoneNumber().phoneNumber();
+    public static String getRandomPassword() {
+        return faker.internet().password();
     }
 
     public static class Registration {
         private Registration() {
         }
 
-        public static UserInfo generateUser(String locale) {
-            return new UserInfo(generateCity(), generateName(locale), generatePhone(locale));
+        public static RegistrationDto getUser(String status) {
+
+            // TODO: создать пользователя user используя методы getRandomLogin(), getRandomPassword() и параметр status
+            return new RegistrationDto(getRandomLogin(), getRandomPassword(), status);
+        }
+
+        public static RegistrationDto getRegisteredUser(String status) {
+            var user = getUser(status);
+            sendRequest(user);
+            return user;
         }
     }
 
     @Value
-    public static class UserInfo {
-        String city;
-        String name;
-        String phone;
+    public static class RegistrationDto {
+        String login;
+        String password;
+        String status;
     }
 }
